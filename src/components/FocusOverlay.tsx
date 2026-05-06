@@ -18,6 +18,7 @@ export function FocusOverlay({ onClose }: Props) {
   const [isIdle, setIsIdle] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [isImmersive, setIsImmersive] = useState(false);
   
   // Settings state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -38,6 +39,9 @@ export function FocusOverlay({ onClose }: Props) {
       interval = setInterval(() => {
         setElapsedSeconds(prev => prev + 1);
       }, 1000);
+      setIsImmersive(true);
+    } else {
+      setIsImmersive(false);
     }
     return () => clearInterval(interval);
   }, [isActive]);
@@ -73,6 +77,7 @@ export function FocusOverlay({ onClose }: Props) {
       didAlertThisRun.current = true;
       setSessionCompleted(true);
       setIsActive(false);
+      setIsImmersive(false);
 
       if (soundEnabled) {
         playEndTone(volume);
@@ -96,7 +101,9 @@ export function FocusOverlay({ onClose }: Props) {
     const resetIdleTimer = () => {
       setIsIdle(false);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      idleTimerRef.current = setTimeout(() => setIsIdle(true), 3000);
+      // Faster idle when isActive
+      const idleTime = isActive ? 2000 : 3000;
+      idleTimerRef.current = setTimeout(() => setIsIdle(true), idleTime);
     };
 
     window.addEventListener('mousemove', resetIdleTimer);
@@ -124,42 +131,66 @@ export function FocusOverlay({ onClose }: Props) {
     { id: 'longBreak', label: 'Long' },
   ];
 
+  const clockScale = isActive ? 'scale-[1.08] md:scale-[1.12]' : 'scale-100';
+
   return (
     <div 
-      className={`fixed inset-0 z-50 bg-[#0B0B0B] flex flex-col items-center justify-between select-none transition-opacity duration-700 ${isIdle ? 'cursor-none' : 'cursor-default'}`}
+      className={`fixed inset-0 z-50 bg-[#000000] flex flex-col items-center justify-between select-none transition-all duration-[2000ms] ease-in-out ${isIdle ? 'cursor-none' : 'cursor-default'}`}
       onTouchStart={handleTouchStart}
       onDoubleClick={exitFullscreen}
     >
-      {/* Header */}
-      <div className={`w-full px-8 pt-8 flex justify-between items-center transition-opacity duration-500 ${isIdle ? 'opacity-0' : 'opacity-100'}`}>
-        <button 
-          onClick={exitFullscreen}
-          className="text-zinc-600 hover:text-zinc-400 text-[10px] tracking-[0.2em] uppercase transition-colors"
-        >
-          Sair do Vazio
-        </button>
-        
-        <button 
-          onClick={() => setShowSettings(true)}
-          className="text-zinc-600 hover:text-zinc-400 transition-colors"
-        >
-          <Settings size={18} />
-        </button>
-      </div>
+      {/* Cinematic Background Breathing Overlay */}
+      <motion.div 
+        animate={isActive ? { 
+          opacity: [0.15, 0.35, 0.15],
+          scale: [1, 1.05, 1]
+        } : { opacity: 0.12 }}
+        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.03)_0%,_transparent_80%)] pointer-events-none" 
+      />
 
-      {/* Main Content */}
-      <div className="flex flex-col items-center space-y-8 md:space-y-12 w-full max-w-4xl relative">
-        {/* Session Completed Toast */}
+      {/* Header */}
+      <AnimatePresence>
+        {!isActive && !isIdle && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="w-full px-8 pt-8 flex justify-between items-center z-50 transition-opacity duration-1000"
+          >
+            <button 
+              onClick={exitFullscreen}
+              className="text-zinc-600 hover:text-zinc-400 text-[10px] tracking-[0.2em] uppercase transition-colors"
+            >
+              Sair do Vazio
+            </button>
+            
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              <Settings size={18} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div /> {/* Top Spacer */}
+
+      {/* Main Container: Expanded height when running */}
+      <div className={`flex flex-col items-center w-full max-w-7xl relative transition-all duration-[1500ms] ease-in-out ${isActive ? 'h-[55vh] justify-center space-y-0' : 'space-y-12'}`}>
+        
+        {/* Session Completed Notification */}
         <AnimatePresence>
           {sessionCompleted && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="absolute -top-24 left-1/2 -translate-x-1/2 bg-[#1C1C1C] border border-zinc-800 p-1 rounded-2xl flex flex-col items-center shadow-2xl z-20 min-w-[200px]"
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="absolute top-0 left-1/2 -translate-x-1/2 bg-[#1C1C1C] border border-zinc-800 p-1 rounded-2xl flex flex-col items-center shadow-2xl z-[60] min-w-[200px]"
             >
               <div className="px-4 py-3 flex items-center space-x-3 w-full border-b border-zinc-800/50">
-                <div className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                 <span className="text-zinc-300 text-xs font-medium tracking-widest uppercase">Sessão concluída</span>
               </div>
               <div className="flex w-full">
@@ -181,41 +212,79 @@ export function FocusOverlay({ onClose }: Props) {
             </motion.div>
           )}
         </AnimatePresence>
+ 
+        {/* Gigantic Cinematic Flip Clock */}
+        <motion.div 
+          layout
+          className={`flex items-center gap-[clamp(2px,1.2vw,18px)] transition-all duration-[2000ms] ease-in-out ${clockScale}`}
+        >
+          <FlipCard value={timeParts.hours} isGigantic={isActive} />
+          <motion.span 
+            animate={isActive ? { opacity: [0.1, 0.4, 0.1] } : { opacity: 0.3 }}
+            transition={{ duration: 4, repeat: Infinity }}
+            className={`text-[#F5F5F5] font-light leading-none transition-all duration-[2000ms] ${isActive ? 'text-2xl md:text-3xl' : 'pb-4 text-4xl md:text-6xl'}`}
+          >
+            :
+          </motion.span>
+          <FlipCard value={timeParts.minutes} isGigantic={isActive} />
+          <motion.span 
+            animate={isActive ? { opacity: [0.1, 0.4, 0.1] } : { opacity: 0.3 }}
+            transition={{ duration: 4, repeat: Infinity }}
+            className={`text-[#F5F5F5] font-light leading-none transition-all duration-[2000ms] ${isActive ? 'text-2xl md:text-3xl' : 'pb-4 text-4xl md:text-6xl'}`}
+          >
+            :
+          </motion.span>
+          <FlipCard value={timeParts.seconds} isGigantic={isActive} />
+        </motion.div>
 
-        {/* Flip Clock */}
-        <div className="flex items-center space-x-3 md:space-x-6">
-          <FlipCard value={timeParts.hours} />
-          <span className="text-[#EAEAEA] text-4xl md:text-6xl font-light opacity-30 pb-4">:</span>
-          <FlipCard value={timeParts.minutes} />
-          <span className="text-[#EAEAEA] text-4xl md:text-6xl font-light opacity-30 pb-4">:</span>
-          <FlipCard value={timeParts.seconds} />
-        </div>
+        {/* Motivational Content: Hidden when running */}
+        <AnimatePresence>
+          {!isActive && (
+            <motion.div 
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 1200, ease: "easeInOut" }}
+              className="flex flex-col items-center w-full mt-20"
+            >
+              <MotivationalText elapsedSeconds={elapsedSeconds} />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Motivational Text */}
-        <MotivationalText elapsedSeconds={elapsedSeconds} />
-
-        {/* Controls */}
-        <div className={`flex flex-col items-center space-y-8 transition-opacity duration-500 ${isIdle ? 'opacity-0' : 'opacity-100'}`}>
-          <div className="flex space-x-3">
-            {modes.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => handleModeChange(m.id)}
-                className={`px-4 py-1.5 text-[10px] tracking-widest uppercase transition-all duration-300 rounded-full border ${
-                  mode === m.id 
-                    ? 'bg-[#EAEAEA] text-black border-[#EAEAEA]' 
-                    : 'text-zinc-500 border-zinc-900 hover:border-zinc-700'
-                }`}
+        {/* Immersive Controls Area */}
+        <div className={`flex flex-col items-center transition-all duration-[1500ms] ${isIdle ? 'opacity-0' : 'opacity-100'} ${isActive ? 'fixed bottom-12' : 'relative mt-12'}`}>
+          
+          {/* Mode Selector (Hidden when running) */}
+          <AnimatePresence>
+            {!isActive && (
+              <motion.div 
+                initial={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 800 }}
+                className="flex space-x-3 mb-12"
               >
-                {m.label}
-              </button>
-            ))}
-          </div>
+                {modes.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => handleModeChange(m.id)}
+                    className={`px-6 py-2 text-[10px] tracking-[0.25em] uppercase transition-all duration-500 rounded-full border ${
+                      mode === m.id 
+                        ? 'bg-[#F5F5F5] text-black border-[#F5F5F5]' 
+                        : 'text-zinc-600 border-zinc-900 hover:border-zinc-700'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-12">
+            {/* Play/Pause Button: Cinematic shift */}
             <button
               onClick={() => isActive ? setIsActive(false) : handleStart()}
-              className="w-16 h-16 rounded-full bg-[#1C1C1C] flex items-center justify-center group hover:bg-[#252525] transition-all duration-300 shadow-lg border border-zinc-800/50"
+              className={`rounded-full flex items-center justify-center transition-all duration-[1200ms] ${isActive ? 'w-16 h-16 bg-transparent border border-white/5 opacity-10 hover:opacity-100 flex shadow-none' : 'w-20 h-20 bg-[#111111] shadow-2xl border border-white/5'}`}
             >
               <AnimatePresence mode="wait">
                 {!isActive ? (
@@ -224,7 +293,7 @@ export function FocusOverlay({ onClose }: Props) {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    className="w-0 h-0 border-y-[8px] border-y-transparent border-l-[14px] border-l-[#EAEAEA] ml-1"
+                    className="w-0 h-0 border-y-[10px] border-y-transparent border-l-[18px] border-l-[#F5F5F5] ml-1"
                   />
                 ) : (
                   <motion.div
@@ -232,22 +301,30 @@ export function FocusOverlay({ onClose }: Props) {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex space-x-1.5"
+                    className="flex space-x-2.5"
                   >
-                    <div className="w-1.5 h-4 bg-[#EAEAEA] rounded-full" />
-                    <div className="w-1.5 h-4 bg-[#EAEAEA] rounded-full" />
+                    <div className="w-1.5 h-6 bg-[#F5F5F5] rounded-full" />
+                    <div className="w-1.5 h-6 bg-[#F5F5F5] rounded-full" />
                   </motion.div>
                 )}
               </AnimatePresence>
             </button>
             
-            <button
-              onClick={handleReset}
-              className="text-zinc-600 hover:text-zinc-400 text-[10px] tracking-widest uppercase transition-colors flex items-center space-x-2"
-            >
-              <RotateCcw size={12} />
-              <span>Resetar</span>
-            </button>
+            {/* Reset Button: Hidden when running */}
+            <AnimatePresence>
+              {!isActive && (
+                <motion.button
+                  key="reset"
+                  initial={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  onClick={handleReset}
+                  className="text-zinc-600 hover:text-zinc-400 tracking-[0.2em] uppercase transition-all duration-700 flex items-center space-x-2 text-[10px]"
+                >
+                  <RotateCcw size={12} />
+                  <span>Resetar</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -337,11 +414,23 @@ export function FocusOverlay({ onClose }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
-      <footer className={`pb-8 text-center space-y-1 transition-opacity duration-500 ${isIdle ? 'opacity-0' : 'opacity-100'}`}>
-        <p className="text-zinc-700 text-[10px] tracking-[0.3em] uppercase">2026 VOID</p>
-        <p className="text-zinc-800 text-[9px] tracking-widest">criado por Leonardo Assunção</p>
-      </footer>
+      <div /> {/* Bottom Spacer */}
+
+      {/* Footer: Cinema Fade */}
+      <AnimatePresence>
+        {!isActive && !isIdle && (
+          <motion.footer 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.2 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2000 }}
+            className="pb-12 text-center space-y-1 z-10"
+          >
+            <p className="text-zinc-700 text-[10px] tracking-[0.3em] uppercase">2026 VOID</p>
+            <p className="text-zinc-800 text-[9px] tracking-widest">criado por Leonardo Assunção</p>
+          </motion.footer>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

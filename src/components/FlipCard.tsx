@@ -3,41 +3,56 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface Props {
   value: string;
-  label?: string;
+  isGigantic?: boolean;
 }
 
-export function FlipCard({ value }: Props) {
+export function FlipCard({ value, isGigantic = false }: Props) {
   return (
-    <div className="relative flex flex-col items-center">
-      <div className="relative w-20 h-28 md:w-32 md:h-44 bg-[#1C1C1C] rounded-[12px] shadow-2xl overflow-hidden flex flex-col">
-        {/* Top Half */}
-        <div className="absolute inset-0 flex flex-col">
-          <div className="h-1/2 w-full border-b border-black/20" />
-          <div className="h-1/2 w-full bg-gradient-to-t from-black/20 to-transparent" />
-        </div>
+    <div className="relative flex flex-col items-center group transition-all duration-1000">
+      <div 
+        className={`relative ${
+          isGigantic 
+            ? 'w-[clamp(120px,18vw,320px)] h-[clamp(150px,23vw,400px)]' 
+            : 'w-24 h-34 md:w-40 md:h-56'
+        } bg-[#0A0A0A] rounded-[16px] md:rounded-[24px] shadow-[0_25px_60px_-12px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col ring-1 ring-white/10 transition-all duration-1000`}
+      >
+        {/* Reflection/Glow Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none z-20" />
+        
+        {/* Top Half Shade */}
+        <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-black/30 to-transparent pointer-events-none z-10" />
+        
+        {/* Bottom Half Shade */}
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/50 to-transparent pointer-events-none z-10" />
 
-        {/* Numbers */}
+        {/* Numbers Container */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="popLayout" initial={false}>
             <motion.span
               key={value}
-              initial={{ rotateX: -90, opacity: 0 }}
-              animate={{ rotateX: 0, opacity: 1 }}
-              exit={{ rotateX: 90, opacity: 0 }}
+              initial={{ y: '10%', rotateX: -90, opacity: 0, filter: 'blur(12px)' }}
+              animate={{ y: '0%', rotateX: 0, opacity: 1, filter: 'blur(0px)' }}
+              exit={{ y: '-10%', rotateX: 90, opacity: 0, filter: 'blur(12px)' }}
               transition={{ 
-                duration: 0.6, 
-                ease: [0.4, 0, 0.2, 1] 
+                duration: 0.8, 
+                ease: [0.19, 1, 0.22, 1] 
               }}
-              className="text-[#EAEAEA] font-bold tabular-nums leading-none select-none"
-              style={{ fontSize: 'clamp(2.5rem, 10vw, 6rem)' }}
+              className="text-[#F5F5F5] font-bold tabular-nums leading-none select-none drop-shadow-[0_0_40px_rgba(255,255,255,0.15)] text-center flex items-center justify-center"
+              style={{ 
+                fontSize: isGigantic 
+                  ? 'clamp(3rem, 10.5vw, 12rem)' 
+                  : 'clamp(2.5rem, 8vw, 5.5rem)',
+                width: '100%',
+                height: '100%'
+              }}
             >
               {value}
             </motion.span>
           </AnimatePresence>
         </div>
 
-        {/* Middle Line */}
-        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-black/40 z-10" />
+        {/* Middle Line Separator */}
+        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-black/60 shadow-[0_1px_0_rgba(255,255,255,0.03)] z-30" />
       </div>
     </div>
   );
