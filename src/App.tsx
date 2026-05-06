@@ -96,7 +96,7 @@ export default function App() {
         className="pb-12 text-center space-y-1.5 z-10"
       >
         <p className="text-[#F5F5F5] text-[9px] tracking-[0.5em] uppercase font-light">2026 VOID</p>
-        <p className="footer-signature-animation text-[#F5F5F5] text-[8px] tracking-[0.3em] font-light">Created by Leonardo Assunção</p>
+        <p className="text-[#F5F5F5] text-[8px] tracking-[0.3em] font-light opacity-60">Created by Leonardo Assunção</p>
       </motion.footer>
 
       {isFocusMode && <FocusOverlay onClose={() => setIsFocusMode(false)} />}
